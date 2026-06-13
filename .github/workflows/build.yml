@@ -22,6 +22,24 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Cache Spigot BuildTools artifacts
+        uses: actions/cache@v4
+        id: spigot-cache
+        with:
+          path: ~/.m2/repository/org/spigotmc
+          key: spigot-1.21.10-1.21.11-26.1.2
+
+      - name: Build Spigot with BuildTools
+        if: steps.spigot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/buildtools
+          wget -q -O /tmp/buildtools/BuildTools.jar \
+            https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+          cd /tmp/buildtools
+          java -jar BuildTools.jar --rev 1.21.10 --compile-if-changed
+          java -jar BuildTools.jar --rev 1.21.11 --compile-if-changed
+          java -jar BuildTools.jar --rev 26.1.2 --compile-if-changed
+
       - name: Build with Maven
         run: mvn -B clean package -DBUILD_NUMBER=${{ github.run_number }}
         
