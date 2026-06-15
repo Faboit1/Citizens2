@@ -46,6 +46,24 @@ jobs:
           java -jar BuildTools.jar --rev 1.21.11
           $JAVA_HOME_25_X64/bin/java -jar BuildTools.jar --rev 26.1.2
 
+      - name: Install missing Spigot remapped classifiers
+        run: |
+          M2=$HOME/.m2/repository/org/spigotmc/spigot
+          # 1.21.10: BuildTools only installs the base jar; install it as remapped-mojang and remapped-obf
+          mvn install:install-file -q \
+            -Dfile=$M2/1.21.10-R0.1-SNAPSHOT/spigot-1.21.10-R0.1-SNAPSHOT.jar \
+            -DgroupId=org.spigotmc -DartifactId=spigot \
+            -Dversion=1.21.10-R0.1-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
+          mvn install:install-file -q \
+            -Dfile=$M2/1.21.10-R0.1-SNAPSHOT/spigot-1.21.10-R0.1-SNAPSHOT.jar \
+            -DgroupId=org.spigotmc -DartifactId=spigot \
+            -Dversion=1.21.10-R0.1-SNAPSHOT -Dclassifier=remapped-obf -Dpackaging=jar
+          # 1.21.11: BuildTools installs remapped-obf but not remapped-mojang; the base jar is mojang-named
+          mvn install:install-file -q \
+            -Dfile=$M2/1.21.11-R0.2-SNAPSHOT/spigot-1.21.11-R0.2-SNAPSHOT.jar \
+            -DgroupId=org.spigotmc -DartifactId=spigot \
+            -Dversion=1.21.11-R0.2-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
+
       - name: Build with Maven
         run: mvn -B clean package -DBUILD_NUMBER=${{ github.run_number }}
         
