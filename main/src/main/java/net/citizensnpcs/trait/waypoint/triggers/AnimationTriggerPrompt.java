@@ -31,7 +31,7 @@ public class AnimationTriggerPrompt extends StringPrompt implements WaypointTrig
         if (input.startsWith("at ")) {
             try {
                 at = CommandContext.parseLocation(
-                        context.getForWhom() instanceof Player ? ((Player) context.getForWhom()).getLocation() : null,
+                        context.getForWhom() instanceof Player ? ((Player) context.getForWhom()).getWorld() : null,
                         input.replaceFirst("at ", ""));
                 Messaging.send((CommandSender) context.getForWhom(), Messages.WAYPOINT_TRIGGER_ANIMATION_AT_SET,
                         Util.prettyPrintLocation(at));
