@@ -15,12 +15,54 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up JDK 25 (required for Spigot 26.1.2 BuildTools)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
+
+      - name: Cache Spigot BuildTools artifacts
+        uses: actions/cache@v4
+        id: spigot-cache
+        with:
+          path: ~/.m2/repository/org/spigotmc
+          key: spigot-1.21.10-1.21.11-26.1.2
+
+      - name: Build Spigot with BuildTools
+        if: steps.spigot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p /tmp/buildtools
+          wget -q -O /tmp/buildtools/BuildTools.jar \
+            https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar
+          cd /tmp/buildtools
+          java -jar BuildTools.jar --rev 1.21.10
+          java -jar BuildTools.jar --rev 1.21.11
+          $JAVA_HOME_25_X64/bin/java -jar BuildTools.jar --rev 26.1.2
+
+      - name: Install missing Spigot remapped classifiers
+        run: |
+          M2=$HOME/.m2/repository/org/spigotmc/spigot
+          # 1.21.10: BuildTools only installs the base jar; install it as remapped-mojang and remapped-obf
+          mvn install:install-file -q \
+            -Dfile=$M2/1.21.10-R0.1-SNAPSHOT/spigot-1.21.10-R0.1-SNAPSHOT.jar \
+            -DgroupId=org.spigotmc -DartifactId=spigot \
+            -Dversion=1.21.10-R0.1-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
+          mvn install:install-file -q \
+            -Dfile=$M2/1.21.10-R0.1-SNAPSHOT/spigot-1.21.10-R0.1-SNAPSHOT.jar \
+            -DgroupId=org.spigotmc -DartifactId=spigot \
+            -Dversion=1.21.10-R0.1-SNAPSHOT -Dclassifier=remapped-obf -Dpackaging=jar
+          # 1.21.11: BuildTools installs remapped-obf but not remapped-mojang; the base jar is mojang-named
+          mvn install:install-file -q \
+            -Dfile=$M2/1.21.11-R0.2-SNAPSHOT/spigot-1.21.11-R0.2-SNAPSHOT.jar \
+            -DgroupId=org.spigotmc -DartifactId=spigot \
+            -Dversion=1.21.11-R0.2-SNAPSHOT -Dclassifier=remapped-mojang -Dpackaging=jar
 
       - name: Build with Maven
         run: mvn -B clean package -DBUILD_NUMBER=${{ github.run_number }}
